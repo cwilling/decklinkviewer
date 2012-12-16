@@ -1,0 +1,9 @@
+Chris Willing <c.willing@uq.edu.au>
+
+To generate the Makefile, run:
+  qmake decklinkviewer.pro
+
+Now run:
+  make
+
+

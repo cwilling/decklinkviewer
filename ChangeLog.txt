@@ -1,0 +1,3 @@
+20121217 Christoph Willing <c.willing@uq.edu.au>
+  - initial commit to GitHup (from my DecklinkCaptureViewer-0.2)
+

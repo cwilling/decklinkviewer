@@ -1,0 +1,4 @@
+#!/bin/sh
+
+convert -size 1920x1080 -depth 8 -sampling-factor 4:2:2 $1 $2
+
