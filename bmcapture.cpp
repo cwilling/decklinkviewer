@@ -159,7 +159,7 @@ int     BMCapture::GetFrameSize(int card, int mode, int *winWidth, int *winHeigh
 
 }
 
-void    BMCapture::print_capabilities()
+int    BMCapture::print_capabilities()
 {
     IDeckLinkIterator* deckLinkIterator;
     IDeckLink*         deckLink;
@@ -171,7 +171,7 @@ void    BMCapture::print_capabilities()
     if (deckLinkIterator == NULL)
     {
         std::cerr << "A DeckLink iterator could not be created (DeckLink drivers may not be installed)." << std::endl;
-        return;
+        return numDevices;
     }
 
     // Enumerate all cards in this system
@@ -205,6 +205,8 @@ void    BMCapture::print_capabilities()
     if (numDevices == 0)
         std::cout << "No Blackmagic Design devices were found." << std::endl;
     std::cout << std::endl;
+
+    return numDevices;
 }
 
 void    BMCapture::print_input_modes(IDeckLink* deckLink)

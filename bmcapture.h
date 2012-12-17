@@ -82,7 +82,7 @@ public:
     void    print_input_capabilities (IDeckLink* deckLink);
     void    print_output_capabilities (IDeckLink* deckLink);
 
-    void    print_capabilities();
+    int    print_capabilities();
     void    capture(int device, int mode, int connection);
 
     int     GetFrameSize(int card, int mode, int *winWidth, int *winHeight);
