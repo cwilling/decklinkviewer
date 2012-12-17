@@ -1,9 +1,23 @@
 Chris Willing <c.willing@uq.edu.au>
 
+A decklinkviewer.pro file that works for me is included.
+It may need minor modifications to work on other systems
+    e.g. remove "-lswscale" from LIBS
+
 To generate the Makefile, run:
   qmake decklinkviewer.pro
 
 Now run:
   make
 
+The decklinkviewer executable expects to be told which
+input connection (-i option) and which pixel format (-m)
+to use. A typical invocation is:
+    ./decklinkviewer -i1 -m8
+(HDMI input, 1080i50 on a Decklink Extreme 3D card)
+
+Use:
+    ./decklink -l
+to obtain a listing of the available connection and pixel
+format types.
 
