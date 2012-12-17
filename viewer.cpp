@@ -1,6 +1,8 @@
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */
 
 /*
+Copyright (C) 2013 Christoph Willing
+
 This file is part of decklinkviewer.
 
 decklinkviewer is free software: you can redistribute it and/or modify
@@ -22,83 +24,83 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 
 CDeckLinkGLWidget::CDeckLinkGLWidget(QWidget* parent) : QGLWidget(parent)
 {
-	refCount = 1;
-	
-	deckLinkInput = deckLinkInput;
-	deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
+    refCount = 1;
+
+    deckLinkInput = deckLinkInput;
+    deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
 }
 
 CDeckLinkGLWidget::CDeckLinkGLWidget() : QGLWidget()
 {
-	refCount = 1;
-	
-	deckLinkInput = deckLinkInput;
-	deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
+    refCount = 1;
+
+    deckLinkInput = deckLinkInput;
+    deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
 }
 
-void	CDeckLinkGLWidget::initializeGL ()
+void    CDeckLinkGLWidget::initializeGL ()
 {
-	if (deckLinkScreenPreviewHelper != NULL)
-	{
-		mutex.lock();
-			deckLinkScreenPreviewHelper->InitializeGL();
-		mutex.unlock();
-	}
+    if (deckLinkScreenPreviewHelper != NULL)
+    {
+        mutex.lock();
+            deckLinkScreenPreviewHelper->InitializeGL();
+        mutex.unlock();
+    }
 }
 
-void	CDeckLinkGLWidget::paintGL ()
+void    CDeckLinkGLWidget::paintGL ()
 {
-	mutex.lock();
-		glLoadIdentity();
-		
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		
-		deckLinkScreenPreviewHelper->PaintGL();
-	mutex.unlock();
+    mutex.lock();
+        glLoadIdentity();
+        
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        
+        deckLinkScreenPreviewHelper->PaintGL();
+    mutex.unlock();
 }
 
-void	CDeckLinkGLWidget::resizeGL (int width, int height)
+void    CDeckLinkGLWidget::resizeGL (int width, int height)
 {
-	mutex.lock();	
-		glViewport(0, 0, width, height);
-	mutex.unlock();
+    mutex.lock();	
+        glViewport(0, 0, width, height);
+    mutex.unlock();
 }
 
-HRESULT		CDeckLinkGLWidget::QueryInterface (REFIID iid, LPVOID *ppv)
+HRESULT CDeckLinkGLWidget::QueryInterface (REFIID iid, LPVOID *ppv)
 {
-	*ppv = NULL;
-	return E_NOINTERFACE;
+    *ppv = NULL;
+    return E_NOINTERFACE;
 }
 
-ULONG		CDeckLinkGLWidget::AddRef ()
+ULONG   CDeckLinkGLWidget::AddRef ()
 {
-	int		oldValue;
-	
-	oldValue = refCount.fetchAndAddAcquire(1);
-	return (ULONG)(oldValue + 1);
+    int		oldValue;
+
+    oldValue = refCount.fetchAndAddAcquire(1);
+    return (ULONG)(oldValue + 1);
 }
 
-ULONG		CDeckLinkGLWidget::Release ()
+ULONG   CDeckLinkGLWidget::Release ()
 {
-	int		oldValue;
-	
-	oldValue = refCount.fetchAndAddAcquire(-1);
-	if (oldValue == 1)
-	{
-		delete this;
-	}
-	
-	return (ULONG)(oldValue - 1);
+    int		oldValue;
+
+    oldValue = refCount.fetchAndAddAcquire(-1);
+    if (oldValue == 1)
+    {
+        delete this;
+    }
+
+    return (ULONG)(oldValue - 1);
 }
 
-HRESULT		CDeckLinkGLWidget::DrawFrame (IDeckLinkVideoFrame* theFrame)
+HRESULT CDeckLinkGLWidget::DrawFrame (IDeckLinkVideoFrame* theFrame)
 {
-	if (deckLinkScreenPreviewHelper != NULL)
-	{
-		deckLinkScreenPreviewHelper->SetFrame(theFrame);
-		update();
-	}
-	return S_OK;
+    if (deckLinkScreenPreviewHelper != NULL)
+    {
+        deckLinkScreenPreviewHelper->SetFrame(theFrame);
+        update();
+    }
+    return S_OK;
 }
 

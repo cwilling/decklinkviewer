@@ -1,6 +1,8 @@
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */
 
 /*
+Copyright (C) 2013 Christoph Willing
+
 This file is part of decklinkviewer.
 
 decklinkviewer is free software: you can redistribute it and/or modify
@@ -26,11 +28,33 @@ BMCapture::BMCapture() : VideoDelegate()
 
 }
 
-void    BMCapture::announce()
+/* First, implement virtual methods (from VideoDelegate)
+*/
+HRESULT BMCapture::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags)
 {
-    std::cout << "Announcing: BMCapture instance started ..." << std::endl;
+    return S_OK;
 }
 
+HRESULT BMCapture::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*)
+{
+    BMDTimeValue        frameTime, frameDuration;
+    int                 hours, minutes, seconds, frames, width, height;
+    HRESULT             theResult;
+
+    /*
+        Do something with the pixels if necessary
+        (not needed for plain OpenGL Viewer)
+        e.g.
+            arrivedFrame->GetStreamTime(&frameTime, &frameDuration, 600);
+    */
+
+    //displayWindow->emit_frame_update();
+
+    return S_OK;
+}
+
+/* Now ordinary BMCapture methods
+*/
 void    BMCapture::SetDisplayWindow(DisplayWindow **dispay_window)
 {
     displayWindow = *dispay_window;
@@ -464,28 +488,5 @@ void    BMCapture::capture(int device, int mode, int connection)
         displayModeIterator->Release();
 
     return;
-}
-
-HRESULT BMCapture::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags)
-{
-    return S_OK;
-}
-
-HRESULT BMCapture::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*)
-{
-    BMDTimeValue        frameTime, frameDuration;
-    int                 hours, minutes, seconds, frames, width, height;
-    HRESULT             theResult;
-
-    /*
-        Do something with the pixels if necessary
-        (not needed for plain OpenGL Viewer)
-        e.g.
-            arrivedFrame->GetStreamTime(&frameTime, &frameDuration, 600);
-    */
-
-    //displayWindow->emit_frame_update();
-
-    return S_OK;
 }
 

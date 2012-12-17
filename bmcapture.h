@@ -4,6 +4,8 @@
 #define _BMCAPTURE_H_
 
 /*
+Copyright (C) 2013 Christoph Willing
+
 This file is part of decklinkviewer.
 
 decklinkviewer is free software: you can redistribute it and/or modify

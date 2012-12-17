@@ -1,9 +1,11 @@
-a/* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */
+/* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */
 
 #ifndef DECKLINK_VIEWER_H
 #define DECKLINK_VIEWER_H
 
 /*
+Copyright (C) 2013 Christoph Willing
+
 This file is part of decklinkviewer.
 
 decklinkviewer is free software: you can redistribute it and/or modify
@@ -31,25 +33,25 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 class CDeckLinkGLWidget : public QGLWidget, public IDeckLinkScreenPreviewCallback
 {
 private:
-	QAtomicInt refCount;
-	QMutex mutex;	
-	IDeckLinkInput* deckLinkInput;
-	IDeckLinkGLScreenPreviewHelper* deckLinkScreenPreviewHelper;
+    QAtomicInt refCount;
+    QMutex mutex;	
+    IDeckLinkInput* deckLinkInput;
+    IDeckLinkGLScreenPreviewHelper* deckLinkScreenPreviewHelper;
 	
 public:
-	CDeckLinkGLWidget(QWidget* parent);
-	CDeckLinkGLWidget();
-	
-	// IDeckLinkScreenPreviewCallback
-	virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG AddRef();
-	virtual ULONG Release();
-	virtual HRESULT DrawFrame(IDeckLinkVideoFrame* theFrame);
+    CDeckLinkGLWidget(QWidget* parent);
+    CDeckLinkGLWidget();
+
+    // IDeckLinkScreenPreviewCallback
+    virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv);
+    virtual ULONG AddRef();
+    virtual ULONG Release();
+    virtual HRESULT DrawFrame(IDeckLinkVideoFrame* theFrame);
 	
 protected:
-	void initializeGL();
-	void paintGL();
-	void resizeGL(int width, int height);
+    void initializeGL();
+    void paintGL();
+    void resizeGL(int width, int height);
 };
 
 #endif // DECKLINK_VIEWER_H //

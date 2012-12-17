@@ -1,4 +1,24 @@
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */
+
+/*
+Copyright (C) 2013 Christoph Willing
+
+This file is part of decklinkviewer.
+
+decklinkviewer is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+decklinkviewer is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <QApplication>
 
 #include "bmcapture.h"
@@ -17,7 +37,6 @@ int main(int argc, char *argv[])
     DisplayWindow *displayWindow;
 
     BMCapture bmCapture;
-    bmCapture.announce();
 
     while ((c = getopt(argc, argv, "lhc:m:i:")) != EOF )
     {
@@ -29,7 +48,6 @@ int main(int argc, char *argv[])
                 break;
 
             case 'h':
-//                fprintf(stderr, "Usage> %s \n", argv[0]);
                 std::cerr << "Usage> " << argv[0] << std::endl;
                 std::cerr << "\t\t\t -l list capabilities" << std::endl;
                 std::cerr << "\t\t\t -c select Card to use (default 0)" << std::endl;
