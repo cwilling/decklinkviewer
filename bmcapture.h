@@ -72,9 +72,11 @@ class BMCapture : public VideoDelegate
 
 private:
     DisplayWindow       *displayWindow;
+    int deviceId;
 
 public:
     BMCapture();
+    BMCapture(int id);
 
     void    print_input_modes (IDeckLink* deckLink);
     void    print_output_modes (IDeckLink* deckLink);

@@ -24,32 +24,36 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 
 
-DisplayWindow::DisplayWindow(int width, int height): QMainWindow()
+DisplayWindow::DisplayWindow(int width, int height, int tiles): QMainWindow()
 {
     baseWidth = width;
     baseHeight = height;
+    number_of_tiles = tiles;
 
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     sizePolicy.setHeightForWidth(true);
     setSizePolicy(sizePolicy);
-    setFixedSize(QSize(baseWidth/4, baseHeight/4));
-    aspectRatio = (1.0 * baseWidth) / (1.0 * baseHeight);
+    setFixedSize(QSize(baseWidth*tiles/4, baseHeight/4));
+    aspectRatio = (1.0 * baseWidth * tiles) / (1.0 * baseHeight);
     show();
 
     QFrame* centralFrame = new QFrame(this);
     setCentralWidget(centralFrame);
 
-    QGridLayout* layout = new QGridLayout(centralFrame);
-    glviewer = new CDeckLinkGLWidget();
-    layout->addWidget(glviewer, 0, 0, 0, 0);
+    //QGridLayout* layout = new QGridLayout(centralFrame);
 
+    //glviewer = new CDeckLinkGLWidget();
+    //layout->addWidget(glviewer, 0, 0, 0, 0);
+    //glviewer->resize(this->size());
 
-    glviewer->resize(this->size());
-    //glviewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    //glviewer->setSizePolicy(sizePolicy);
+    QHBoxLayout* layout = new QHBoxLayout(centralFrame);
+    for(int i=0;i<number_of_tiles;i++)
+    {
+        glviewers[i] = new CDeckLinkGLWidget();
+        layout->addWidget(glviewers[i]);
+        glviewers[i]->resize(this->size());
+    }
 
-    //createActions();
-    //createMenus();
 
 
 }

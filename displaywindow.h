@@ -26,6 +26,7 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "viewer.h"
 
+#define MAX_VIEW_WINDOWS     (32)
 
 class DisplayWindow : public QMainWindow
 {
@@ -33,9 +34,9 @@ class DisplayWindow : public QMainWindow
 
 public:
     DisplayWindow();
-    DisplayWindow(int width, int height);
+    DisplayWindow(int width, int height, int tiles);
 
-    CDeckLinkGLWidget *glviewer;
+    CDeckLinkGLWidget *glviewers[MAX_VIEW_WINDOWS];
 
     void setDesktopDimensions(int width, int height);
     void emit_frame_update();
@@ -55,6 +56,7 @@ private:
     int desktopWidth;
     int desktopHeight;
     double aspectRatio;
+    int number_of_tiles;
     int mouseX;
     static const int minXsize = 100;
 

@@ -38,15 +38,16 @@ int main(int argc, char *argv[])
     bool tile_inputs = false;
     int tiles_requested = 0;
     int tiles_available = 0;
+    BMCapture *bmCaptureDevices[MAX_VIEW_WINDOWS]; /* 4 devices per card would need 8 cards - surely enough */
 
-    BMCapture bmCapture;
+    BMCapture *bmCapture = new BMCapture(0);
 
     while ((c = getopt(argc, argv, "lhc:m:i:t")) != EOF )
     {
         switch(c)
         {
             case 'l':
-                bmCapture.print_capabilities();
+                bmCapture->print_capabilities();
                 exit(0);
                 break;
 
@@ -78,7 +79,6 @@ int main(int argc, char *argv[])
             case 't':
                 // Whether to tile multiple input cards
                 tile_inputs = true;
-                tiles_available = bmCapture.print_capabilities();
                 break;
 
             default:
@@ -90,22 +90,36 @@ int main(int argc, char *argv[])
     if ( (mode < 0) || (connection < 0) )
     {
         std::cerr << "Please specify both input mode (-m) and connection interface (-i) from the following lists" << std::endl;
-        bmCapture.print_capabilities();
+        bmCapture->print_capabilities();
         exit(1);
     }
 
-    if (bmCapture.GetFrameSize(card, mode, &winWidth, &winHeight) < 0 )
+    tiles_available = bmCapture->print_capabilities();
+    if ( tiles_available < 1 )
     {
-	bmCapture.print_capabilities();
-	exit(1);
+        std::cerr << "No devices available. Exiting now ..." << std::endl;
+        exit(2);
+    }
+    bmCaptureDevices[0] = bmCapture;
+    for(int i=1;i<tiles_available;i++)
+    {
+        bmCaptureDevices[i] = new BMCapture(i);
     }
 
-    displayWindow = new DisplayWindow(winWidth, winHeight);
-    bmCapture.SetDisplayWindow(&displayWindow);
-    bmCapture.capture(card, mode, connection);
+    // Assume the first device has id = 0
+    if (bmCaptureDevices[0]->GetFrameSize(0, mode, &winWidth, &winHeight) < 0 )
+    {
+	bmCaptureDevices[0]->print_capabilities();
+	exit(1);
+    }
+    displayWindow = new DisplayWindow(winWidth, winHeight, tiles_available);
 
-//    displayWindow = DisplayWindow(winWidth, winHeight);
-//    displayWindow.show();
+    for(int i=0;i<tiles_available;i++)
+    {
+        bmCaptureDevices[i]->SetDisplayWindow(&displayWindow);
+        bmCaptureDevices[i]->capture(i, mode, connection);
+    }
+
     return app.exec();
 }
 

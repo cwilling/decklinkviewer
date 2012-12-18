@@ -23,9 +23,9 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-BMCapture::BMCapture() : VideoDelegate()
+BMCapture::BMCapture(int id) : VideoDelegate()
 {
-
+    deviceId = id;
 }
 
 /* First, implement virtual methods (from VideoDelegate)
@@ -55,9 +55,9 @@ HRESULT BMCapture::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFram
 
 /* Now ordinary BMCapture methods
 */
-void    BMCapture::SetDisplayWindow(DisplayWindow **dispay_window)
+void    BMCapture::SetDisplayWindow(DisplayWindow **display_window)
 {
-    displayWindow = *dispay_window;
+    displayWindow = *display_window;
 }
 
 int     BMCapture::GetFrameSize(int card, int mode, int *winWidth, int *winHeight)
@@ -386,7 +386,7 @@ void    BMCapture::capture(int device, int mode, int connection)
         if (result == S_OK)
         {
             char deviceName[64];    
-            std::cerr << "Using device " << deviceNameString << std::endl;
+            std::cerr << "XXX Using device " << deviceNameString << std::endl;
 
             // Query the DeckLink for its configuration interface
             result = deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput);
@@ -472,7 +472,7 @@ void    BMCapture::capture(int device, int mode, int connection)
                     //delegate = new VideoDelegate();
                     deckLinkInput->SetCallback(this);
 
-                    deckLinkInput->SetScreenPreviewCallback(displayWindow->glviewer);
+                    deckLinkInput->SetScreenPreviewCallback(displayWindow->glviewers[deviceId]);
 
                     std::cerr << "Starting capture" << std::endl;
                     deckLinkInput->StartStreams();

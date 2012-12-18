@@ -1,0 +1,27 @@
+20121217 Christoph Willing.
+
+Support for tiling multiple cards will be simple
+and restrictive at first; more complex versions
+should be possible once the basics are sorted out.
+
+For now, if the -t option is given, we'll try to
+use all available cards in the tiling. We assume
+a simple left to right tiling beginning with the
+lowest numbered card on theleft. We also assume (for now)
+that all capture cards are the same. With different
+cards, capabilities and modes (and therefore their
+capability numbering) may be different.
+When we support different cards, we will first try to
+apply whatever settings were given by the user to card 0.
+Assuming that succeeds, we'd look for the corresponding
+capability id's to use in the other cards. Of course we'd
+have to insist that whatever options the user supplies
+are available in each card i.e. each card would use the
+same input type (HDMI, Component etc.), and pixel mode
+(1080i50, 720p etc.).
+
+Later we should be able to:
+- use only a subset of the available cards
+- mix the order of the tiling
+- different tiling shapes e.g. 2x2 instead of 4x1
+
