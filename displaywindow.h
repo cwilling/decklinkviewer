@@ -59,6 +59,8 @@ private:
     int mouseX;
     static const int minXsize = 100;
     bool do_crawl;
+    QDesktopWidget *desktop;
+    int number_of_screens;
 
     void createActions();
     void createMenus();

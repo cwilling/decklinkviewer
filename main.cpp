@@ -146,12 +146,7 @@ int main(int argc, char *argv[])
     }
 
     if( do_slide )
-    {
-        QSize displaySize = app.desktop()->size();
-        std::cerr << "Screen size = " << displaySize.width() << "x" << displaySize.height() << std::endl;
-        displayWindow->setDesktopDimensions(displaySize.width(), displaySize.height());
         displayWindow->setScreenCrawl(do_slide);
-    }
 
     return app.exec();
 }

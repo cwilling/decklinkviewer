@@ -31,6 +31,33 @@ DisplayWindow::DisplayWindow(int width, int height, int tiles): QMainWindow()
     number_of_tiles = tiles;
     do_crawl = false;
 
+    desktop = QApplication::desktop();
+    number_of_screens = desktop->screenCount();
+    if ( number_of_screens > 1 )
+    {
+        std::cerr << "Multi-screen (" << number_of_screens << ")" << std::endl;
+
+        // multiscreen
+        if( desktop->isVirtualDesktop() )
+        {
+            // managed as a single screen
+            std::cerr << "- managed as single deskop" << std::endl;
+        }
+        else
+        {
+            // a set of individual screens
+            std::cerr << "- managed as individual screens" << std::endl;
+        }
+    }
+    else
+    {
+        // single screen
+        std::cerr << "Single screen" << std::endl;
+        desktopWidth = desktop->width();
+        desktopHeight = desktop->height();
+    }
+    std::cerr << "Desktop size calculated as: " << desktopWidth << "x" << desktopHeight <<std::endl;
+
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     sizePolicy.setHeightForWidth(true);
     setSizePolicy(sizePolicy);
@@ -89,7 +116,7 @@ void DisplayWindow::setDesktopDimensions(int width, int height)
 {
     desktopWidth = width;
     desktopHeight = height;
-    fprintf(stderr, "Noted desktop size: %dx%d\n", desktopWidth, desktopHeight);
+    std::cerr << "Noted desktop size: " << desktopWidth << "x" << desktopHeight << std::endl;
 }
 
 /*
