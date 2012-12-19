@@ -23,7 +23,6 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-
 #include <QObject>
 #include <iostream>
 #include <iomanip>
@@ -31,8 +30,43 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 #include "DeckLinkAPI.h"
 #include "displaywindow.h"
 
-class VideoDelegate : public IDeckLinkInputCallback
+class VideoDelegate;
+
+class BMCapture : public QObject
 {
+    Q_OBJECT
+
+private:
+    DisplayWindow       *displayWindow;
+    int deviceId;
+    VideoDelegate       *mVideoDelegate;
+
+public:
+    BMCapture();
+    BMCapture(int id);
+
+    void    print_input_modes (IDeckLink* deckLink);
+    void    print_output_modes (IDeckLink* deckLink);
+
+    void    print_input_capabilities (IDeckLink* deckLink);
+    void    print_output_capabilities (IDeckLink* deckLink);
+
+    int    print_capabilities();
+    void    capture(int mode, int connection, bool tiled);
+
+    int     GetFrameSize(int card, int mode, int *winWidth, int *winHeight);
+    void    SetDisplayWindow(DisplayWindow **dispay_window);
+
+    HRESULT VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*);
+    HRESULT VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags);
+
+//signals:
+//    void frameArrived(){};
+};
+
+class VideoDelegate : public QObject, public IDeckLinkInputCallback
+{
+    Q_OBJECT
 
 private:
     int32_t mRefCount;
@@ -64,35 +98,11 @@ private:
 
     virtual HRESULT VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*);
     virtual HRESULT VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags);
+
+signals:
+    void captureFrameArrived();
 };
 
-
-class BMCapture : public VideoDelegate
-{
-
-private:
-    DisplayWindow       *displayWindow;
-    int deviceId;
-
-public:
-    BMCapture();
-    BMCapture(int id);
-
-    void    print_input_modes (IDeckLink* deckLink);
-    void    print_output_modes (IDeckLink* deckLink);
-
-    void    print_input_capabilities (IDeckLink* deckLink);
-    void    print_output_capabilities (IDeckLink* deckLink);
-
-    int    print_capabilities();
-    void    capture(int device, int mode, int connection);
-
-    int     GetFrameSize(int card, int mode, int *winWidth, int *winHeight);
-    void    SetDisplayWindow(DisplayWindow **dispay_window);
-
-    HRESULT VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*);
-    HRESULT VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags);
-};
 
 
 #endif	/* _BMCAPTURE_H_ */

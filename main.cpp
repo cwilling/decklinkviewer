@@ -25,6 +25,8 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 #include "displaywindow.h"
 #include <getopt.h>
 
+#define MAX_CAPTURE_TILES     (32)
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -35,14 +37,15 @@ int main(int argc, char *argv[])
     int connection = -1;
     int winWidth, winHeight;
     DisplayWindow *displayWindow;
-    bool tile_inputs = false;
+    bool do_tile_inputs = false;
+    bool do_slide = false;
     int tiles_requested = 0;
     int tiles_available = 0;
-    BMCapture *bmCaptureDevices[MAX_VIEW_WINDOWS]; /* 4 devices per card would need 8 cards - surely enough */
+    BMCapture *bmCaptureDevices[MAX_CAPTURE_TILES]; /* from displaywindow.h */
 
     BMCapture *bmCapture = new BMCapture(0);
 
-    while ((c = getopt(argc, argv, "lhc:m:i:t")) != EOF )
+    while ((c = getopt(argc, argv, "lhc:m:i:ts")) != EOF )
     {
         switch(c)
         {
@@ -58,6 +61,7 @@ int main(int argc, char *argv[])
                 std::cerr << "\t\t\t -m select input video Mode" << std::endl;
                 std::cerr << "\t\t\t -i select connection Interface" << std::endl;
                 std::cerr << "\t\t\t -t Tile multiple capture cards" << std::endl;
+                std::cerr << "\t\t\t -s Slide across the screen" << std::endl;
                 exit(0);
                 break;
 
@@ -76,9 +80,14 @@ int main(int argc, char *argv[])
                 connection = atoi(optarg);
                 break;
 
+            case 's':
+                // Whether to slide window across the screen
+                do_slide = true;
+                break;
+
             case 't':
                 // Whether to tile multiple input cards
-                tile_inputs = true;
+                do_tile_inputs = true;
                 break;
 
             default:
@@ -95,6 +104,12 @@ int main(int argc, char *argv[])
     }
 
     tiles_available = bmCapture->print_capabilities();
+    if ( tiles_available > MAX_CAPTURE_TILES )
+    {
+        std::cerr << "Too many capture devices (" << tiles_available << ")!"  << std::endl;
+        tiles_available = MAX_CAPTURE_TILES;
+        std::cerr << "Limiting capture devices to " << tiles_available << std::endl;
+    }
     if ( tiles_available < 1 )
     {
         std::cerr << "No devices available. Exiting now ..." << std::endl;
@@ -112,12 +127,30 @@ int main(int argc, char *argv[])
 	bmCaptureDevices[0]->print_capabilities();
 	exit(1);
     }
-    displayWindow = new DisplayWindow(winWidth, winHeight, tiles_available);
 
-    for(int i=0;i<tiles_available;i++)
+    if( do_tile_inputs )
     {
-        bmCaptureDevices[i]->SetDisplayWindow(&displayWindow);
-        bmCaptureDevices[i]->capture(i, mode, connection);
+        displayWindow = new DisplayWindow(winWidth, winHeight, tiles_available);
+
+        for(int i=0;i<tiles_available;i++)
+        {
+            bmCaptureDevices[i]->SetDisplayWindow(&displayWindow);
+            bmCaptureDevices[i]->capture(mode, connection, do_tile_inputs);
+        }
+    }
+    else
+    {
+        displayWindow = new DisplayWindow(winWidth, winHeight, 1);
+        bmCaptureDevices[card]->SetDisplayWindow(&displayWindow);
+        bmCaptureDevices[card]->capture(mode, connection, do_tile_inputs);
+    }
+
+    if( do_slide )
+    {
+        QSize displaySize = app.desktop()->size();
+        std::cerr << "Screen size = " << displaySize.width() << "x" << displaySize.height() << std::endl;
+        displayWindow->setDesktopDimensions(displaySize.width(), displaySize.height());
+        displayWindow->setScreenCrawl(do_slide);
     }
 
     return app.exec();

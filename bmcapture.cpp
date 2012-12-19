@@ -22,20 +22,14 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 #include "bmcapture.h"
 
 
-
-BMCapture::BMCapture(int id) : VideoDelegate()
-{
-    deviceId = id;
-}
-
 /* First, implement virtual methods (from VideoDelegate)
 */
-HRESULT BMCapture::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags)
+HRESULT VideoDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags)
 {
     return S_OK;
 }
 
-HRESULT BMCapture::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*)
+HRESULT VideoDelegate::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*)
 {
     BMDTimeValue        frameTime, frameDuration;
     int                 hours, minutes, seconds, frames, width, height;
@@ -48,9 +42,18 @@ HRESULT BMCapture::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFram
             arrivedFrame->GetStreamTime(&frameTime, &frameDuration, 600);
     */
 
-    //displayWindow->emit_frame_update();
+    bool hasNoInputSource = arrivedFrame->GetFlags() & bmdFrameHasNoInputSource;
+    emit captureFrameArrived();
 
     return S_OK;
+}
+
+
+BMCapture::BMCapture(int id) :
+    QObject(),
+    mVideoDelegate(NULL)
+{
+    deviceId = id;
 }
 
 /* Now ordinary BMCapture methods
@@ -175,7 +178,7 @@ int    BMCapture::print_capabilities()
     }
 
     // Enumerate all cards in this system
-    std::cout << "Device(s):" << std::endl;
+    std::cout << "Available device(s):" << std::endl;
     while (deckLinkIterator->Next(&deckLink) == S_OK)
     {
         const char *            deviceNameString = NULL;
@@ -342,7 +345,7 @@ void    BMCapture::print_input_capabilities(IDeckLink* deckLink)
         deckLinkConfiguration->Release();
 }
 
-void    BMCapture::capture(int device, int mode, int connection)
+void    BMCapture::capture(int mode, int connection, bool tiled)
 {
     int         dnum, mnum, cnum, itemCount;
 
@@ -356,7 +359,7 @@ void    BMCapture::capture(int device, int mode, int connection)
     IDeckLinkConfiguration       *deckLinkConfiguration = NULL;
 //    VideoDelegate                *delegate;
 
-    std::cerr << "Starting> Capture on device " << device << ", mode " << mode << ", connection " << std::endl;
+    std::cerr << "***** Setting up capture from device " << deviceId << ", mode " << mode << ", connection " << connection << std::endl;
 
     // Create an IDeckLinkIterator object to enumerate all DeckLink cards in the system
     deckLinkIterator = CreateDeckLinkIteratorInstance();
@@ -371,7 +374,7 @@ void    BMCapture::capture(int device, int mode, int connection)
 
     while (deckLinkIterator->Next(&deckLink) == S_OK)
     {
-        if (device != dnum)
+        if (deviceId != dnum)
         {
             dnum++;
             // Release the IDeckLink instance when we've finished with it to prevent leaks
@@ -386,7 +389,7 @@ void    BMCapture::capture(int device, int mode, int connection)
         if (result == S_OK)
         {
             char deviceName[64];    
-            std::cerr << "XXX Using device " << deviceNameString << std::endl;
+            std::cerr << "Capture device: " << deviceNameString << std::endl;
 
             // Query the DeckLink for its configuration interface
             result = deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput);
@@ -427,7 +430,7 @@ void    BMCapture::capture(int device, int mode, int connection)
 
                     const char *displayModeString = NULL;
                     displayMode->GetName(&displayModeString);
-                    std::cerr << "Enable video input: " << displayModeString << std::endl;
+                    std::cerr << "Enabling video input mode: " << displayModeString << std::endl;
 
                     deckLinkInput->EnableVideoInput(displayMode->GetDisplayMode(), pf, 0);
 
@@ -469,12 +472,16 @@ void    BMCapture::capture(int device, int mode, int connection)
                         std::cerr << "Input set to: " << connection << std::endl;
                     }
 
-                    //delegate = new VideoDelegate();
-                    deckLinkInput->SetCallback(this);
+                    mVideoDelegate = new VideoDelegate();
+                    deckLinkInput->SetCallback(mVideoDelegate);
 
-                    deckLinkInput->SetScreenPreviewCallback(displayWindow->glviewers[deviceId]);
+                    if( tiled )
+                        deckLinkInput->SetScreenPreviewCallback(displayWindow->glviewers[deviceId]);
+                    else
+                        deckLinkInput->SetScreenPreviewCallback(displayWindow->glviewers[0]);
 
-                    std::cerr << "Starting capture" << std::endl;
+                    connect(mVideoDelegate, SIGNAL(captureFrameArrived()), displayWindow, SLOT(updateFramePosition()), Qt::QueuedConnection);
+                    std::cerr << "Starting capture from device " << deviceId << std::endl;
                     deckLinkInput->StartStreams();
                 }
             }

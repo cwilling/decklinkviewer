@@ -29,6 +29,7 @@ DisplayWindow::DisplayWindow(int width, int height, int tiles): QMainWindow()
     baseWidth = width;
     baseHeight = height;
     number_of_tiles = tiles;
+    do_crawl = false;
 
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     sizePolicy.setHeightForWidth(true);
@@ -40,21 +41,15 @@ DisplayWindow::DisplayWindow(int width, int height, int tiles): QMainWindow()
     QFrame* centralFrame = new QFrame(this);
     setCentralWidget(centralFrame);
 
-    //QGridLayout* layout = new QGridLayout(centralFrame);
-
-    //glviewer = new CDeckLinkGLWidget();
-    //layout->addWidget(glviewer, 0, 0, 0, 0);
-    //glviewer->resize(this->size());
-
     QHBoxLayout* layout = new QHBoxLayout(centralFrame);
+
+    glviewers = (CDeckLinkGLWidget**)calloc(tiles, sizeof(CDeckLinkGLWidget*));
     for(int i=0;i<number_of_tiles;i++)
     {
         glviewers[i] = new CDeckLinkGLWidget();
         layout->addWidget(glviewers[i]);
         glviewers[i]->resize(this->size());
     }
-
-
 
 }
 
@@ -97,15 +92,23 @@ void DisplayWindow::setDesktopDimensions(int width, int height)
     fprintf(stderr, "Noted desktop size: %dx%d\n", desktopWidth, desktopHeight);
 }
 
-void DisplayWindow::emit_frame_update()
+/*
+    This is just to show movement of the display window across the desktop.
+    Wrapping is only rudimentary - a real implementation would have to do it properly
+*/
+void DisplayWindow::setScreenCrawl(bool yesno)
 {
-    emit frameUpdated();
+    do_crawl = yesno;
 }
-
-void DisplayWindow::frameUpdated()
+void DisplayWindow::updateFramePosition()
 {
+    if( do_crawl == false )
+        return;
+
+    //std::cout << "Slot received signal" << std:: endl;
+
     QPoint currentPosition = this->pos();
-//  fprintf(stdout, "current x = %d\n", currentPosition.x());
+    //std::cout << "current x = " << currentPosition.x() << std:: endl;
 
     int newX = currentPosition.x() + 2;
     /*
@@ -116,7 +119,8 @@ void DisplayWindow::frameUpdated()
         QSize currentSize = this->size();
         newX = - currentSize.width();
     }
-//  this->move(newX, 20);
+    move(newX, currentPosition.y());
+
 }
 
 
