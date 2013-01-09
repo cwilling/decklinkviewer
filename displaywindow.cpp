@@ -33,6 +33,7 @@ DisplayWindow::DisplayWindow(int width, int height, int tiles): QMainWindow()
 
     desktop = QApplication::desktop();
     number_of_screens = desktop->screenCount();
+    desktopWidth = desktopHeight = 0;
     if ( number_of_screens > 1 )
     {
         std::cerr << "Multi-screen (" << number_of_screens << ")" << std::endl;
@@ -42,11 +43,24 @@ DisplayWindow::DisplayWindow(int width, int height, int tiles): QMainWindow()
         {
             // managed as a single screen
             std::cerr << "- managed as single deskop" << std::endl;
+
+            // Assume we have a single row of all the screens
+            // so add all the widths
+            // and take height of tallest (probably all the same though)
+            for(int i=0;i<number_of_screens;i++)
+            {
+                QRect g = desktop->screenGeometry(i);
+                desktopWidth += g.width();
+                if( g.height() > desktopHeight )
+                    desktopHeight = g.height();
+            }
         }
         else
         {
             // a set of individual screens
             std::cerr << "- managed as individual screens" << std::endl;
+
+            // Is this a usable screen configuration?
         }
     }
     else
