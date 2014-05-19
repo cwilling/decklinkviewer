@@ -1,4 +1,4 @@
-Chris Willing <c.willing@uq.edu.au>
+Chris Willing <chris.willing %at% iinet.net.au>
 
 A decklinkviewer.pro file that works for me is included.
 It may need minor modifications to work on other systems
