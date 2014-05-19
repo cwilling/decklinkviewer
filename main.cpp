@@ -42,10 +42,14 @@ int main(int argc, char *argv[])
     int tiles_requested = 0;
     int tiles_available = 0;
     BMCapture *bmCaptureDevices[MAX_CAPTURE_TILES]; /* from displaywindow.h */
+    const char *video_output_filename = NULL;
+    AVOutputFormat *fmt = NULL;
+
+    av_register_all();
 
     BMCapture *bmCapture = new BMCapture(0);
 
-    while ((c = getopt(argc, argv, "lhc:m:i:ts")) != EOF )
+    while ((c = getopt(argc, argv, "lhc:m:i:tsf:F:")) != EOF )
     {
         switch(c)
         {
@@ -90,6 +94,14 @@ int main(int argc, char *argv[])
                 do_tile_inputs = true;
                 break;
 
+            case 'f':
+                video_output_filename = optarg;
+                break;
+
+            case 'F':
+                fmt = av_guess_format(optarg, NULL, NULL);
+                break;
+
             default:
                 std::cerr << "Decklink Viewer Program" << std::endl;
                 exit(0);
@@ -119,6 +131,30 @@ int main(int argc, char *argv[])
     for(int i=1;i<tiles_available;i++)
     {
         bmCaptureDevices[i] = new BMCapture(i);
+    }
+
+    // Check output file & format
+    if (!video_output_filename)
+    {
+        std::cerr << "No output file specified. For piping to mplayer via stdin, try adding: -f pipe:1" << std::endl;
+        exit(3);
+    }
+    if (!fmt)
+    {
+        fmt = av_guess_format(NULL, video_output_filename, NULL);
+        if (!fmt)
+        {
+            std::cerr << "No output format specified. Try adding: -F nut" << std::endl;
+            exit(4);
+        }
+    }
+    std::cerr << "File " << video_output_filename << ", format " << fmt << std::endl;
+
+    // Set up anything that applies to all tiles
+    for(int i=0;i<tiles_available;i++)
+    {
+        bmCaptureDevices[i]->SetOutputFilename(video_output_filename);
+        bmCaptureDevices[i]->SetOutputFormat(fmt);
     }
 
     // Assume the first device has id = 0

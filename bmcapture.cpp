@@ -21,9 +21,274 @@ along with decklinkviewer.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "bmcapture.h"
 
+/* ================================================================================== */
+/* Stuff (temporary) from bmdtools for streaming encoded video frames */
 
-/* First, implement virtual methods (from VideoDelegate)
+static enum PixelFormat pix_fmt = PIX_FMT_UYVY422;
+static enum AVSampleFormat sample_fmt = AV_SAMPLE_FMT_S16;
+
+
+
+
+AVStream * BMCapture::add_audio_stream(AVFormatContext *oc, enum CodecID codec_id)
+{
+    AVCodecContext *c;
+    AVCodec *codec;
+    AVStream *st;
+
+    st = avformat_new_stream(oc, NULL);
+    if (!st) {
+        fprintf(stderr, "Could not alloc stream\n");
+        exit(1);
+    }
+
+    c             = st->codec;
+    c->codec_id   = codec_id;
+    c->codec_type = AVMEDIA_TYPE_AUDIO;
+
+    /* put sample parameters */
+    c->sample_fmt = sample_fmt;
+    //    c->bit_rate = 64000;
+    c->sample_rate = 48000;
+    c->channels    = g_audioChannels;
+    // some formats want stream headers to be separate
+    if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
+        c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+    }
+
+    codec = avcodec_find_encoder(c->codec_id);
+    if (!codec) {
+        fprintf(stderr, "codec not found\n");
+        exit(1);
+    }
+
+    if (avcodec_open2(c, codec, NULL) < 0) {
+        fprintf(stderr, "could not open codec\n");
+        exit(1);
+    }
+
+    return st;
+}
+
+AVStream * BMCapture::add_video_stream(AVFormatContext *oc, enum CodecID codec_id, IDeckLinkDisplayMode *displayMode)
+{
+    AVCodecContext *c;
+    AVCodec *codec;
+    AVStream *st;
+
+    st = avformat_new_stream(oc, NULL);
+    if (!st) {
+        fprintf(stderr, "Could not alloc stream\n");
+        exit(1);
+    }
+
+    c             = st->codec;
+    c->codec_id   = codec_id;
+    c->codec_type = AVMEDIA_TYPE_VIDEO;
+
+    /* put sample parameters */
+    //    c->bit_rate = 400000;
+    /* resolution must be a multiple of two */
+    c->width  = displayMode->GetWidth();
+    c->height = displayMode->GetHeight();
+    /* time base: this is the fundamental unit of time (in seconds) in terms
+    * of which frame timestamps are represented. for fixed-fps content,
+    * timebase should be 1/framerate and timestamp increments should be
+    * identically 1.*/
+    displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
+    c->time_base.den = frameRateScale;
+    c->time_base.num = frameRateDuration;
+    c->pix_fmt       = pix_fmt;
+
+    if (codec_id == CODEC_ID_V210)
+        c->bits_per_raw_sample = 10;
+    // some formats want stream headers to be separate
+    if (oc->oformat->flags & AVFMT_GLOBALHEADER) {
+        c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+    }
+
+    /* find the video encoder */
+    codec = avcodec_find_encoder(c->codec_id);
+    if (!codec) {
+        fprintf(stderr, "codec not found\n");
+        exit(1);
+    }
+
+    /* open the codec */
+    if (avcodec_open2(c, codec, NULL) < 0) {
+        fprintf(stderr, "could not open codec\n");
+        exit(1);
+    }
+
+    return st;
+}
+
+void * BMCapture::push_packet(void *ctx)
+{
+    AVFormatContext *s = (AVFormatContext *)ctx;
+    AVPacket pkt;
+    int ret;
+
+    while (mVideoDelegate->avpacket_queue_get(&pkt, 1))
+    {
+        av_interleaved_write_frame(s, &pkt);
+        if (mVideoDelegate->avpacket_queue_size() > g_memoryLimit)
+        {
+            pthread_cond_signal(&sleepCond);
+        }
+    }
+    return NULL;
+}
+
+
+
+/* End of bmdtools stuff */
+/* ================================================================================== */
+
+/* First, implement methods (from VideoDelegate)
 */
+//void VideoDelegate::avpacket_queue_init()
+//{
+//    AVPacketQueue *q = &queue;
+//
+//    memset(q, 0, sizeof(AVPacketQueue));
+//    pthread_mutex_init(&q->mutex, NULL);
+//    pthread_cond_init(&q->cond, NULL);
+//}
+void VideoDelegate::avpacket_queue_init(AVPacketQueue *q)
+{
+    memset(q, 0, sizeof(AVPacketQueue));
+    pthread_mutex_init(&q->mutex, NULL);
+    pthread_cond_init(&q->cond, NULL);
+}
+void VideoDelegate::avpacket_queue_init()
+{
+    avpacket_queue_init(&queue);
+}
+
+void VideoDelegate::avpacket_queue_flush(AVPacketQueue *q)
+{
+    AVPacketList *pkt, *pkt1;
+
+    pthread_mutex_lock(&q->mutex);
+    for (pkt = q->first_pkt; pkt != NULL; pkt = pkt1) {
+        pkt1 = pkt->next;
+        av_free_packet(&pkt->pkt);
+        av_freep(&pkt);
+    }
+    q->last_pkt   = NULL;
+    q->first_pkt  = NULL;
+    q->nb_packets = 0;
+    q->size       = 0;
+    pthread_mutex_unlock(&q->mutex);
+}
+
+//void VideoDelegate::avpacket_queue_end()
+//{
+//    AVPacketQueue *q = &queue;
+//
+//    avpacket_queue_flush(q);
+//    pthread_mutex_destroy(&q->mutex);
+//    pthread_cond_destroy(&q->cond);
+//}
+void VideoDelegate::avpacket_queue_end(AVPacketQueue *q)
+{
+    avpacket_queue_flush(q);
+    pthread_mutex_destroy(&q->mutex);
+    pthread_cond_destroy(&q->cond);
+}
+void VideoDelegate::avpacket_queue_end()
+{
+    avpacket_queue_end(&queue);
+}
+
+int VideoDelegate::avpacket_queue_put(AVPacketQueue *q, AVPacket *pkt)
+{
+    AVPacketList *pkt1;
+
+    /* duplicate the packet */
+    if (pkt != &flush_pkt && av_dup_packet(pkt) < 0) {
+        return -1;
+    }
+
+    pkt1 = (AVPacketList *)av_malloc(sizeof(AVPacketList));
+    if (!pkt1) {
+        return -1;
+    }
+    pkt1->pkt  = *pkt;
+    pkt1->next = NULL;
+
+    pthread_mutex_lock(&q->mutex);
+
+    if (!q->last_pkt) {
+        q->first_pkt = pkt1;
+    } else {
+        q->last_pkt->next = pkt1;
+    }
+
+    q->last_pkt = pkt1;
+    q->nb_packets++;
+    q->size += pkt1->pkt.size + sizeof(*pkt1);
+
+    pthread_cond_signal(&q->cond);
+
+    pthread_mutex_unlock(&q->mutex);
+    return 0;
+}
+
+int VideoDelegate::avpacket_queue_get(AVPacketQueue *q, AVPacket *pkt, int block)
+{
+    AVPacketList *pkt1;
+    int ret;
+
+    pthread_mutex_lock(&q->mutex);
+
+    for (;; ) {
+        pkt1 = q->first_pkt;
+        if (pkt1) {
+            if (pkt1->pkt.data == flush_pkt.data) {
+                ret = 0;
+                break;
+            }
+            q->first_pkt = pkt1->next;
+            if (!q->first_pkt) {
+                q->last_pkt = NULL;
+            }
+            q->nb_packets--;
+            q->size -= pkt1->pkt.size + sizeof(*pkt1);
+            *pkt     = pkt1->pkt;
+            av_free(pkt1);
+            ret = 1;
+            break;
+        } else if (!block) {
+            ret = 0;
+            break;
+        } else {
+            pthread_cond_wait(&q->cond, &q->mutex);
+        }
+    }
+    pthread_mutex_unlock(&q->mutex);
+    return ret;
+}
+int VideoDelegate::avpacket_queue_get(AVPacket *pkt, int block)
+{
+    AVPacketQueue *q = &queue;
+    return avpacket_queue_get(q, pkt, block);
+}
+
+unsigned long long VideoDelegate::avpacket_queue_size(AVPacketQueue *q)
+{
+    unsigned long long size;
+    pthread_mutex_lock(&q->mutex);
+    size = q->size;
+    pthread_mutex_unlock(&q->mutex);
+    return size;
+}
+unsigned long long VideoDelegate::avpacket_queue_size()
+{
+    return avpacket_queue_size(&queue);
+}
+
 HRESULT VideoDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags)
 {
     return S_OK;
@@ -31,6 +296,8 @@ HRESULT VideoDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents,
 
 HRESULT VideoDelegate::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*)
 {
+    void *frameBytes;
+    void *audioFrameBytes;
     BMDTimeValue        frameTime, frameDuration;
     int                 hours, minutes, seconds, frames, width, height;
     HRESULT             theResult;
@@ -42,18 +309,71 @@ HRESULT VideoDelegate::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrived
             arrivedFrame->GetStreamTime(&frameTime, &frameDuration, 600);
     */
 
+    framecount++;
     bool hasNoInputSource = arrivedFrame->GetFlags() & bmdFrameHasNoInputSource;
     emit captureFrameArrived();
+
+    if (hasNoInputSource)
+    {
+        fprintf(stderr, "Frame received (#%d) - No signal detected ..\n", framecount);
+        return S_OK;
+    }
+    else
+    {
+        AVPacket pkt;
+        AVCodecContext *c;
+
+        if ( g_verbose )
+            fprintf(stderr, "Frame received (#%d) - Signal OK\n", framecount);
+
+        av_init_packet(&pkt);
+        c = video_st->codec;
+        arrivedFrame->GetBytes(&frameBytes);
+        arrivedFrame->GetStreamTime(&frameTime, &frameDuration, 500);
+        arrivedFrame->GetStreamTime(&frameTime, &frameDuration, video_st->time_base.den);
+        pkt.pts = pkt.dts = frameTime / video_st->time_base.num;
+
+        if (initial_video_pts == AV_NOPTS_VALUE)
+        {
+            initial_video_pts = pkt.pts;
+        }
+        pkt.duration = frameDuration;
+        //To be made sure it still applies
+        pkt.flags       |= AV_PKT_FLAG_KEY;
+        pkt.stream_index = video_st->index;
+        pkt.data         = (uint8_t *)frameBytes;
+        pkt.size         = arrivedFrame->GetRowBytes() * arrivedFrame->GetHeight();
+        c->frame_number++;
+        avpacket_queue_put(&queue, &pkt);
+
+    }
 
     return S_OK;
 }
 
+void    BMCapture::SetOutputFilename(const char *filename)
+{
+    g_videoOutputFile = filename;
+}
+void    BMCapture::SetOutputFormat(AVOutputFormat *format)
+{
+    fmt = format;
+}
 
 BMCapture::BMCapture(int id) :
     QObject(),
     mVideoDelegate(NULL)
 {
     deviceId = id;
+    g_videoModeIndex = -1;
+    g_audioChannels = 2;
+    g_audioSampleDepth = 16;
+    g_videoOutputFile = NULL;
+    g_audioOutputFile = NULL;
+    g_maxFrames = -1;
+    g_memoryLimit = 1024 * 1024 * 1024;            // 1GByte(>50 sec)
+    fmt = NULL;
+
 }
 
 /* Now ordinary BMCapture methods
@@ -480,9 +800,42 @@ void    BMCapture::capture(int mode, int connection, bool tiled)
                     else
                         deckLinkInput->SetScreenPreviewCallback(displayWindow->glviewers[0]);
 
+                    oc = avformat_alloc_context();
+                    oc->oformat = fmt;
+                    snprintf(oc->filename, sizeof(oc->filename), "%s", g_videoOutputFile);
+                    fmt->video_codec = (pf == bmdFormat8BitYUV ? CODEC_ID_RAWVIDEO : CODEC_ID_V210);
+
+                    mVideoDelegate->video_st = add_video_stream(oc, fmt->video_codec, displayMode);
+                    if (!(fmt->flags & AVFMT_NOFILE))
+                    {
+                        if (avio_open(&oc->pb, oc->filename, AVIO_FLAG_WRITE) < 0)
+                        {
+                            std::cerr << "Could not open " << oc->filename << std::endl;
+                            exit(6);
+                        }
+                    }
+                    avformat_write_header(oc, NULL);
+
                     connect(mVideoDelegate, SIGNAL(captureFrameArrived()), displayWindow, SLOT(updateFramePosition()), Qt::QueuedConnection);
                     std::cerr << "Starting capture from device " << deviceId << std::endl;
                     deckLinkInput->StartStreams();
+
+                    mVideoDelegate->avpacket_queue_init();
+
+                    pthread_t th;
+//                    if (pthread_create(&th, NULL, BMCapture::push_packet, oc))
+//                    {
+//                        std::cerr << "Ahhhhhhh " << std::endl;
+//                        exit(7);
+//                    }
+//                    // Block main thread until signal occurs
+//                    pthread_mutex_lock(&sleepMutex);
+//                    pthread_cond_wait(&sleepCond, &sleepMutex);
+//                    pthread_mutex_unlock(&sleepMutex);
+//                    deckLinkInput->StopStreams();
+//                    //fprintf(stderr, "Stopping Capture\n");
+//                    mVideoDelegate->avpacket_queue_end();
+
                 }
             }
         }

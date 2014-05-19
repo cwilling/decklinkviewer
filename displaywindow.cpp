@@ -182,13 +182,15 @@ void DisplayWindow::mouseMoveEvent(QMouseEvent *event)
     setFixedSize(QSize(newWidth, newWidth/aspectRatio));
 }
 
+
 void DisplayWindow::keyPressEvent(QKeyEvent *event)
 {
-    if( event->key() == QKeySequence::StandardKey(Qt::CTRL + Qt::Key_P) )
-        std::cerr << "OK" << std::endl;
+    //if( event->key() == QKeySequence::StandardKey(Qt::CTRL + Qt::Key_P) )
+    if( event->key() == QKeySequence::StandardKey(Qt::Key_Q) )
+        std::cerr << "OK - ready to quit ..." << std::endl;
     else
         std::cerr << event->key() << std::endl;
 
-    std::cerr << "--" << QKeySequence::StandardKey(Qt::CTRL + Qt::Key_P) << std::endl;
+    std::cerr << "--" << QKeySequence::StandardKey(Qt::CTRL + Qt::Key_Q) << std::endl;
 }
 

@@ -10,8 +10,8 @@ QT      += opengl
 DEPENDPATH  += . include
 INCLUDEPATH += . include
 
-QMAKE_CFLAGS += -Wno-unused-parameter -Wno-unused-variable -fno-rtti
-QMAKE_CXXFLAGS += -Wno-unused-parameter -Wno-unused-variable -fno-rtti
+QMAKE_CFLAGS += -Wno-unused-parameter -Wno-unused-variable -fno-rtti -D__STDC_CONSTANT_MACROS
+QMAKE_CXXFLAGS += -Wno-unused-parameter -Wno-unused-variable -fno-rtti -D__STDC_CONSTANT_MACROS
 
 # Input
 HEADERS += displaywindow.h \
@@ -27,5 +27,6 @@ SOURCES += main.cpp \
            displaywindow.cpp \
            include/DeckLinkAPIDispatch.cpp
 
-LIBS += -lswscale -ldl
+LIBS += -g -lm -ldl -lavformat -lavformat -lavutil -lavcodec
+#LIBS += -ldl `pkg-config --libs libavformat libswscale libavutil libavcodec`
 
